@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|VisualGDB">
+      <Configuration>Debug</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|VisualGDB">
+      <Configuration>Release</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{94A77165-2499-4694-8256-55530FC9D66D}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <ExplicitSysroot>C:\poky\sdk_x86\sysroots\cortexa9hf-neon-poky-linux-gnueabi</ExplicitSysroot>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <GNUConfigurationType>Debug</GNUConfigurationType>
+    <ToolchainID>com.sysprogs.imported.arm-poky-linux-gnueabi</ToolchainID>
+    <ToolchainVersion>7.1.1/8.0/r0</ToolchainVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <ToolchainID>com.sysprogs.imported.arm-poky-linux-gnueabi</ToolchainID>
+    <ToolchainVersion>7.1.1/8.0/r0</ToolchainVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <Link>
+      <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+      <LibrarySearchDirectories>;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript />
+    </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include;C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include-fixed;=/usr/include/c++/7.1.1;=/usr/include/c++/7.1.1/arm-poky-linux-gnueabi;=/usr/include;=/usr/lib/gcc/arm-poky-linux-gnueabi/7.1.1/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DEBUG=1; _GLIBCXX_ABI_TAG_CXX11=;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <ClCompile Include="HelloVisualGdbPokyWorld.cpp" />
+    <None Include="HelloVisualGdbPokyWorld-Debug.vgdbsettings" />
+    <None Include="HelloVisualGdbPokyWorld-Release.vgdbsettings" />
+  </ItemGroup>
+</Project>
