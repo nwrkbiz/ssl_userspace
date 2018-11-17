@@ -79,7 +79,9 @@ bool KafkaProducer::CreateProducer(string const &broker)
 	if ((rd_kafka_conf_set(conf, "bootstrap.servers",	broker.c_str(), errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK)	||
 		(rd_kafka_conf_set(conf, "compression.type",	"gzip", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK)			||
 		(rd_kafka_conf_set(conf, "message.max.bytes",	"1500", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) 			||
-		(rd_kafka_conf_set(conf, "linger.ms",			"5", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) )
+		(rd_kafka_conf_set(conf, "linger.ms",			"5", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) 				||
+		(rd_kafka_conf_set(conf, "security.protocol",	"ssl", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) 				||
+		(rd_kafka_conf_set(conf, "ssl.ca.location",		"/home/root/cert/ca-cert", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK))		
 	{
 		fprintf(stderr, "%s\n", errstr);
 		return false;
