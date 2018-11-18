@@ -40,22 +40,22 @@
       <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>fpgaregion; pthread;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include;C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include-fixed;=/usr/include/c++/7.1.1;=/usr/include/c++/7.1.1/arm-poky-linux-gnueabi;=/usr/include;=/usr/lib/gcc/arm-poky-linux-gnueabi/7.1.1/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../showip;C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include;C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include-fixed;=/usr/include/c++/7.1.1;=/usr/include/c++/7.1.1/arm-poky-linux-gnueabi;=/usr/include;=/usr/lib/gcc/arm-poky-linux-gnueabi/7.1.1/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1; _GLIBCXX_ABI_TAG_CXX11=;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\showip\ShowIP.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
-    <ClCompile Include="HelloVisualGdbPokyWorld.cpp" />
     <None Include="HelloVisualGdbPokyWorld-Debug.vgdbsettings" />
     <None Include="HelloVisualGdbPokyWorld-Release.vgdbsettings" />
   </ItemGroup>

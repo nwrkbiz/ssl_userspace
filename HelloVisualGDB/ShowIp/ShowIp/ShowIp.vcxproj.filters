@@ -18,14 +18,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HelloVisualGdbPokyWorld.cpp">
-      <Filter>Source files</Filter>
-    </ClCompile>
     <None Include="HelloVisualGdbPokyWorld-Debug.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
     <None Include="HelloVisualGdbPokyWorld-Release.vgdbsettings">
       <Filter>VisualGDB settings</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\showip\ShowIP.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

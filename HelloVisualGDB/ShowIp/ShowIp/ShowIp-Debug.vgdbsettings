@@ -10,7 +10,7 @@
       <Transport>None</Transport>
     </BuildHost>
     <DeploymentHost>
-      <HostName>10.24.99.77</HostName>
+      <HostName>192.168.0.45</HostName>
       <Transport>SSH</Transport>
       <UserName>root</UserName>
     </DeploymentHost>
