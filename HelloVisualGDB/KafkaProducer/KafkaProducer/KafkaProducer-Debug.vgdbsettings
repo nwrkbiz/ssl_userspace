@@ -10,7 +10,7 @@
       <Transport>None</Transport>
     </BuildHost>
     <DeploymentHost>
-      <HostName>192.168.0.33</HostName>
+      <HostName>192.168.178.74</HostName>
       <Transport>SSH</Transport>
       <UserName>root</UserName>
     </DeploymentHost>
@@ -58,7 +58,6 @@
     <ProjectFile>KafkaProducer.vcxproj</ProjectFile>
     <RemoteBuildEnvironment>
       <Records />
-      <EnvironmentSetupFiles />
     </RemoteBuildEnvironment>
     <ParallelJobCount>1</ParallelJobCount>
     <SuppressDirectoryChangeMessages>true</SuppressDirectoryChangeMessages>

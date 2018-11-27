@@ -21,9 +21,23 @@
     <ClCompile Include="KafkaProducer.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="InfluxDB.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="KafkaProducer-Debug.vgdbsettings" />
     <None Include="KafkaProducer-Release.vgdbsettings" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="KafkaProducer.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="InfluxDB.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
