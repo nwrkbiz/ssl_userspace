@@ -11,7 +11,7 @@
 #include "KafkaProducer.h"
 #include "HDC1000.h"
 #include "MPU9250.h"
-#include "ADPS9301.h"
+#include "APDS9301.h"
 
 // for FpgaRegion
 #include <libfpgaregion.h>
@@ -27,7 +27,7 @@ static void ReconfigDone();
 static FpgaRegion fpga("ssl_userspace_app", ReconfigRequest, ReconfigDone);
 
 // HANDLE function for SENSORS
-static bool Handle_Sensor(Sensor * const sens, uint32_t Current_TS);
+static bool Handle_Sensor(Sensor * const sens, int64_t Current_TS);
 
 // Mutex to handle incomming FPGARegion Requests
 static mutex FPGAMutex;
@@ -42,20 +42,20 @@ string		const TOPIC		= "telegraf";
 // LENGHTS of Read Buffers for Sensors
 static const size_t HDC1000_Buffer_Length	= 12;
 static const size_t MPU9250_Buffer_Length	= 37;
-static const size_t ADPS9301_Buffer_Length	= 11;
+static const size_t APDS9301_Buffer_Length	= 11;
 
 ////////////////////////////////////////////////
 // To handle the sensors
 static HDC1000  * hdc  = nullptr;
 static MPU9250  * mpu  = nullptr;
-static ADPS9301 * adps = nullptr;
+static APDS9301 * apds = nullptr;
 
 ////////////////////////////////////////////////
 // MAIN FUNCTIONS
 int main()
 {
 	// Create THREAD to handle incomming INTERRUPTs
-	auto irq_handle_thread = thread(irq_handle);
+	//auto irq_handle_thread = thread(irq_handle);
 	
 	try
 	{
@@ -68,9 +68,9 @@ int main()
 		// Create Sensor Classes
 		hdc  = new HDC1000("HDC1000", "/dev/hdc", HDC1000_Buffer_Length, producer);
 		mpu  = new MPU9250("MPU9250", "/dev/mpu", MPU9250_Buffer_Length, producer);
-		adps = new ADPS9301("ADPS9301", "/dev/adps", ADPS9301_Buffer_Length, producer);
+		apds = new APDS9301("APDS9301", "/dev/apds", APDS9301_Buffer_Length, producer);
 	
-		if ((hdc == nullptr) || (mpu == nullptr) || (adps == nullptr))
+		if ((hdc == nullptr) || (mpu == nullptr) || (apds == nullptr))
 		{
 			cerr << "ERROR: allocating memory for sensor classes!" << endl;
 			return -1;
@@ -86,16 +86,16 @@ int main()
 			FPGAMutex.lock();
 			
 			// Fetch current Time of System (timestamp in milliseconds)
-			uint32_t current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
+			int64_t current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
 			
 			// Handle all Sensors:
 			// Read from one sensor as long as the same timestamp
 			// is recieved!
-			if(!Handle_Sensor(hdc, current_ts))
-				return -1;
-			if (!Handle_Sensor(mpu, current_ts))
-				return -1;
-			if (!Handle_Sensor(adps, current_ts))
+//			if(!Handle_Sensor(hdc, current_ts))
+//				return -1;
+//			if (!Handle_Sensor(mpu, current_ts))
+//				return -1;
+			if (!Handle_Sensor(apds, current_ts))
 				return -1;
 			
 			// Release Lock for FPGA (can now be reconfigured)
@@ -111,10 +111,10 @@ int main()
 	}	
 	
 	// JOIN THREADS and FREE MEMORY
-	irq_handle_thread.join();
+	//irq_handle_thread.join();
 	delete hdc; hdc = nullptr;
 	delete mpu; mpu = nullptr;
-	delete adps; adps = nullptr;
+	delete apds; apds = nullptr;
 	
 	return 0;
 }
@@ -144,7 +144,7 @@ void ReconfigDone()
 	cout << "FPGA was successfully RECONFIGURED!" << endl;
 }
 
-bool Handle_Sensor(Sensor * const sens, uint32_t Current_TS)
+bool Handle_Sensor(Sensor * const sens, int64_t Current_TS)
 {
 	assert(sens != nullptr);
 	

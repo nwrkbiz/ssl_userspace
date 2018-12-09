@@ -47,7 +47,7 @@ void InfluxDB::Set_Measurement(std::string const &Measurement)
 }
 
 
-void InfluxDB::Set_Timestamp(uint32_t Timestamp)
+void InfluxDB::Set_Timestamp(int64_t Timestamp)
 {
 	mTimestamp = Timestamp;
 }

@@ -22,7 +22,7 @@ public:
 	// Every Sensor (specific sensor class) MUST implement
 	// all of these methods!
 	virtual bool		Measure()						= 0;
-	virtual bool		SendValues(TS_TYPE Timestamp)	= 0;
+	virtual bool		SendValues(int64_t Timestamp)	= 0;
 	
 private:
 	

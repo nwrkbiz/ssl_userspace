@@ -32,7 +32,7 @@ bool HDC1000::Measure()
 	uint16_t humid_raw = ((((uint16_t)buf[3]) << 8) | (uint16_t)buf[2]);
 	mHumidity = (((double)temp_raw / (double)(1 << 16)) * 100);
 		
-	uint8_t timestamp_buf[] = { buf[7], buf[6], buf[5], buf[4] };
+	uint8_t timestamp_buf[] = { buf[4], buf[5], buf[6], buf[7] };
 	TS_TYPE ts = 0;
 	Set_Timestamp(0);
 	memcpy(&ts, timestamp_buf, 4);
@@ -51,11 +51,11 @@ uint8_t HDC1000::Get_Humidity() const
 	return mHumidity;
 }
 
-bool HDC1000::SendValues(TS_TYPE Timestamp)
+bool HDC1000::SendValues(int64_t Timestamp)
 {
 	// (1) Send TEMPERATURE value
 	Get_Influx()->Set_Measurement("Temperatur");
-	Get_InfluxTags()["Wert"] = mTemperature;
+	Get_Influx_Fields()["Wert"] = mTemperature;
 	Get_Influx()->Set_Timestamp(Timestamp);
 				
 	if(!Get_Producer().Send_InfluxDB(Get_Influx()))
@@ -67,4 +67,6 @@ bool HDC1000::SendValues(TS_TYPE Timestamp)
 				
 	if (!Get_Producer().Send_InfluxDB(Get_Influx()))
 		return false;
+	
+	return true;
 }

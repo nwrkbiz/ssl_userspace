@@ -50,7 +50,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ADPS9301.h" />
+    <ClInclude Include="APDS9301.h" />
     <ClInclude Include="HDC1000.h" />
     <ClInclude Include="InfluxDB.h" />
     <ClInclude Include="KafkaProducer.h" />
@@ -61,7 +61,7 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
-    <ClCompile Include="ADPS9301.cpp" />
+    <ClCompile Include="APDS9301.cpp" />
     <ClCompile Include="HDC1000.cpp" />
     <ClCompile Include="InfluxDB.cpp" />
     <ClCompile Include="KafkaProducer.cpp" />

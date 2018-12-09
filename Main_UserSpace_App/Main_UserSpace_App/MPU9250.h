@@ -15,7 +15,7 @@ public:
 	
 	// METHODs
 	virtual bool Measure();
-	virtual bool SendValues(TS_TYPE Timestamp);
+	virtual bool SendValues(int64_t Timestamp);
 	
 	// Sensor specific GETTER methods
 	typedef enum { GYRO, ACC, MAGN } eVALUE_TYPE;

@@ -33,9 +33,6 @@
     <ClCompile Include="InfluxDB.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
-    <ClCompile Include="ADPS9301.cpp">
-      <Filter>Source files\Sensors</Filter>
-    </ClCompile>
     <ClCompile Include="HDC1000.cpp">
       <Filter>Source files\Sensors</Filter>
     </ClCompile>
@@ -43,6 +40,9 @@
       <Filter>Source files\Sensors</Filter>
     </ClCompile>
     <ClCompile Include="Sensor.cpp">
+      <Filter>Source files\Sensors</Filter>
+    </ClCompile>
+    <ClCompile Include="APDS9301.cpp">
       <Filter>Source files\Sensors</Filter>
     </ClCompile>
   </ItemGroup>
@@ -57,9 +57,6 @@
     <ClInclude Include="KafkaProducer.h">
       <Filter>Header files</Filter>
     </ClInclude>
-    <ClInclude Include="ADPS9301.h">
-      <Filter>Header files\Sensors</Filter>
-    </ClInclude>
     <ClInclude Include="HDC1000.h">
       <Filter>Header files\Sensors</Filter>
     </ClInclude>
@@ -67,6 +64,9 @@
       <Filter>Header files\Sensors</Filter>
     </ClInclude>
     <ClInclude Include="Sensor.h">
+      <Filter>Header files\Sensors</Filter>
+    </ClInclude>
+    <ClInclude Include="APDS9301.h">
       <Filter>Header files\Sensors</Filter>
     </ClInclude>
   </ItemGroup>
