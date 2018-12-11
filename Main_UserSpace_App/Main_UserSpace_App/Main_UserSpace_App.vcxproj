@@ -40,23 +40,35 @@
       <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
       <LibrarySearchDirectories>;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
-      <AdditionalLibraryNames>rdkafka; z; pthread; rt;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <AdditionalLibraryNames>rdkafka; z; pthread; rt;fpgaregion;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
       <LinkerScript />
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include;C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include-fixed;=/usr/include/c++/7.1.1;=/usr/include/c++/7.1.1/arm-poky-linux-gnueabi;=/usr/include;=/usr/lib/gcc/arm-poky-linux-gnueabi/7.1.1/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG=1; _GLIBCXX_ABI_TAG_CXX11=;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG=1; _GLIBCXX_ABI_TAG_CXX11=;__ARM_PCS_VFP;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="APDS9301.h" />
+    <ClInclude Include="HDC1000.h" />
+    <ClInclude Include="InfluxDB.h" />
+    <ClInclude Include="KafkaProducer.h" />
+    <ClInclude Include="MPU9250.h" />
+    <ClInclude Include="Sensor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
+    <ClCompile Include="APDS9301.cpp" />
+    <ClCompile Include="HDC1000.cpp" />
+    <ClCompile Include="InfluxDB.cpp" />
     <ClCompile Include="KafkaProducer.cpp" />
-    <None Include="KafkaProducer-Debug.vgdbsettings" />
-    <None Include="KafkaProducer-Release.vgdbsettings" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="MPU9250.cpp" />
+    <ClCompile Include="Sensor.cpp" />
+    <None Include="Main_UserSpace_App-Debug.vgdbsettings" />
+    <None Include="Main_UserSpace_App-Release.vgdbsettings" />
   </ItemGroup>
 </Project>
