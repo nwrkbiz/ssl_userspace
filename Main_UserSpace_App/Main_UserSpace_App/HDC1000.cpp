@@ -64,9 +64,9 @@ bool HDC1000::SendValues(int64_t Timestamp)
 	// (2) Send HUMIDITY value
 	Get_Influx()->Set_Measurement("Feuchtigkeit");
 	Get_Influx_Fields()["Wert"] = mHumidity;
-				
+		
 	if (!Get_Producer().Send_InfluxDB(Get_Influx()))
 		return false;
-	
+
 	return true;
 }

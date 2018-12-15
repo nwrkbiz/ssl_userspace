@@ -31,7 +31,7 @@ string const InfluxDB::Get_RawString() const
 	// Put TIMESTAMP into message if THERE is one
 	if(mTimestamp != -1)
 	{
-		message += to_string(mTimestamp);
+		message += to_string(mTimestamp*1000000);	// to get ns out of ms
 	} else
 	{
 		message.pop_back();   	// remove last space

@@ -64,7 +64,7 @@ bool Sensor::Read_CharDevice()
 		
 	ssize_t ret = read(input_fd, mRead_Buffer, mBuffer_Length);
 		
-	if ((ret == -1) || (ret == 0))
+	if (ret != mBuffer_Length)
 	{
 		cerr << "Error: reading Char Device!" << endl;
 		return false;

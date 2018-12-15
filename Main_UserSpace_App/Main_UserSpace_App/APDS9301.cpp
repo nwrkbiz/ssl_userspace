@@ -25,39 +25,25 @@ bool APDS9301::Measure()
 	if(!Read_CharDevice())
 		return false;
 	
-	uint8_t buf_temo[11] = { 0 };
-	memcpy(buf_temo, buf, 11);
-	
 	// Calculate Values out of BUFFER
 	uint16_t temp_CH0 = ((((uint16_t)buf[0]) << 8) | (uint16_t)buf[1]);	
 	uint16_t temp_CH1 = ((((uint16_t)buf[2]) << 8) | (uint16_t)buf[3]);
 	
-	float temp = 0.0;
-	
-	double temp_Division = ((double)temp_CH1) / ((double)temp_CH0);
+	float temp = 0.0f;
+	float temp_Division = ((float)temp_CH1) / ((float)temp_CH0);
 	
 	if ((temp_Division > 0) && (temp_Division <= 0.5))
-	{
-		temp = ((0.0304 * temp_CH0) - (0.062 * temp_CH0 * pow(temp_Division, 1.4)));
-		mBrightness = temp;
-	}
+		temp = ((0.0304 * (float)temp_CH0) - (0.062 * (float)temp_CH0 * pow(temp_Division, 1.4)));
 	else if ((temp_Division > 0.5) && (temp_Division <= 0.61))
-	{
-		temp = ((0.0224 * temp_CH0) - (0.031 * temp_CH1));
-		mBrightness = temp;
-	}
+		temp = ((0.0224 * (float)temp_CH0) - (0.031 * (float)temp_CH1));
 	else if ((temp_Division > 0.61) && (temp_Division <= 0.8))
-	{
-		temp = ((0.0128 * temp_CH0) - (0.0153 * temp_CH1));
-		mBrightness = temp;
-	}
+		temp = ((0.0128 * (float)temp_CH0) - (0.0153 * (float)temp_CH1));
 	else if ((temp_Division > 0.8) && (temp_Division <= 1.3))
-	{
-		temp = ((0.00146  * temp_CH0) - (0.00112 * temp_CH1));
-		mBrightness = ((0.00146  * temp_CH0) - (0.00112 * temp_CH1));
-	}
+		temp = ((0.00146  * (float)temp_CH0) - (0.00112 * (float)temp_CH1));
 	else
-		mBrightness = 0;
+		temp = 0;
+	
+	mBrightness = temp;
 		
 	uint8_t timestamp_buf[] = { buf[4], buf[5], buf[6], buf[7] };
 	TS_TYPE ts = 0;
@@ -81,7 +67,7 @@ bool APDS9301::SendValues(int64_t Timestamp)
 	Get_Influx()->Set_Timestamp(Timestamp);
 				
 	if (!Get_Producer().Send_InfluxDB(Get_Influx()))
-		return false;
+			return false;
 	
 	return true;
 }

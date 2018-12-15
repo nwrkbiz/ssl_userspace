@@ -76,12 +76,11 @@ bool KafkaProducer::CreateProducer(string const &broker)
 	conf = rd_kafka_conf_new();
 
 	// Set the CONFIG for the Producer
-	if (rd_kafka_conf_set(conf, "bootstrap.servers", broker.c_str(), errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
-		fprintf(stderr, "%s\n", errstr);
-		return false;
-	}
-	
-	if (rd_kafka_conf_set(conf, "compression.type", "gzip", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
+	if ((rd_kafka_conf_set(conf, "bootstrap.servers",	broker.c_str(), errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK)	||
+		(rd_kafka_conf_set(conf, "compression.type",	"gzip", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK)			||
+		(rd_kafka_conf_set(conf, "batch.num.messages",	"16000", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) 			||
+		(rd_kafka_conf_set(conf, "linger.ms",			"5", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) )
+	{
 		fprintf(stderr, "%s\n", errstr);
 		return false;
 	}
@@ -123,30 +122,16 @@ bool KafkaProducer::Send_Raw(std::string const &message, std::string const &topi
 	
 	// Send/Produce message.
 retry:
-	if (rd_kafka_produce(
-			/* Topic object */
-			mTopic,
-			/* Use builtin partitioner to select partition*/
-			RD_KAFKA_PARTITION_UA,
-			/* Make a copy of the payload. */
-			RD_KAFKA_MSG_F_COPY,
-			/* Message payload (value) and length */
-			(void*)message.c_str(),
-			message.length(),
-			/* Optional key and its length */
-			NULL,
-			0,
-			/* Message opaque, provided in
-			* delivery report callback as
-			* msg_opaque. */
-			NULL) == -1)
-		{
+	if (!_Send(message))
+	{
 		// Failed to *enqueue* message for producing.
-		fprintf(stderr, "%% Failed to produce to topic %s: %s\n", rd_kafka_topic_name(mTopic), rd_kafka_err2str(rd_kafka_last_error()));
-
+		//fprintf(stderr, "%% Failed to produce to topic %s: %s\n", rd_kafka_topic_name(mTopic), rd_kafka_err2str(rd_kafka_last_error()));
+		
+		
 		// if QUEUE is FULL --> try again
 		if (rd_kafka_last_error() == RD_KAFKA_RESP_ERR__QUEUE_FULL) {
 			rd_kafka_poll(mProducer, 1000/*block for max 1000ms*/);
+			cout << "Queue full!" << endl;
 			goto retry;
 		}
 		
@@ -156,8 +141,8 @@ retry:
 	}
 
 	// Wait for messages to be sent
-	rd_kafka_poll(mProducer, 0/*non-blocking*/);
-	rd_kafka_flush(mProducer, 10 * 1000 /* wait for max 10 seconds */);
+	//rd_kafka_poll(mProducer, 0/*non-blocking*/);
+	//rd_kafka_flush(mProducer, 10 * 1000 /* wait for max 10 seconds */);
 
 	return true;	// return SUCCESS	
 }
@@ -183,6 +168,7 @@ static void stop(int sig) {
 
 // Message delivery report callback.
 static void dr_msg_cb(rd_kafka_t *rk, const rd_kafka_message_t *rkmessage, void *opaque) {
+#if defined(PRINT_SENT_MESSAGE)
 	if (rkmessage->err)
 	{
 		fprintf(stderr, "%% Message delivery failed: %s\n", rd_kafka_err2str(rkmessage->err));
@@ -191,4 +177,28 @@ static void dr_msg_cb(rd_kafka_t *rk, const rd_kafka_message_t *rkmessage, void 
 	{
 		fprintf(stderr, "%% Message delivered (%zd bytes, partition %"PRId32")\n", rkmessage->len, rkmessage->partition);
 	}
+#endif
+}
+
+bool KafkaProducer::_Send(string const & to_send)
+{
+	if (rd_kafka_produce(
+			/* Topic object */
+			mTopic,
+		/* Use builtin partitioner to select partition*/
+		RD_KAFKA_PARTITION_UA,
+		/* Make a copy of the payload. */
+		RD_KAFKA_MSG_F_COPY,
+		/* Message payload (value) and length */
+		(void*)to_send.c_str(),
+		to_send.length(),
+		/* Optional key and its length */
+		NULL,
+		0,
+		/* Message opaque, provided in
+		* delivery report callback as
+		* msg_opaque. */
+		NULL) == -1)
+		return false;
+	return true;
 }

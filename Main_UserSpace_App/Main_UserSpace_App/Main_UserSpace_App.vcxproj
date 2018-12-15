@@ -30,6 +30,8 @@
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.sysprogs.imported.arm-poky-linux-gnueabi</ToolchainID>
     <ToolchainVersion>7.1.1/8.0/r0</ToolchainVersion>
+    <RemoteBuildHost>
+    </RemoteBuildHost>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.sysprogs.imported.arm-poky-linux-gnueabi</ToolchainID>
@@ -53,6 +55,7 @@
     <ClInclude Include="APDS9301.h" />
     <ClInclude Include="HDC1000.h" />
     <ClInclude Include="InfluxDB.h" />
+    <ClInclude Include="IP_Sevenseg.h" />
     <ClInclude Include="KafkaProducer.h" />
     <ClInclude Include="MPU9250.h" />
     <ClInclude Include="Sensor.h" />
@@ -64,6 +67,7 @@
     <ClCompile Include="APDS9301.cpp" />
     <ClCompile Include="HDC1000.cpp" />
     <ClCompile Include="InfluxDB.cpp" />
+    <ClCompile Include="IP_Sevenseg.cpp" />
     <ClCompile Include="KafkaProducer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MPU9250.cpp" />

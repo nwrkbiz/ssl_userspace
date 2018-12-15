@@ -37,6 +37,16 @@ bool MPU9250::Measure()
 		return false;
 	
 	// Calculate Values out of BUFFER
+//	mAcc[0]  = ((((uint16_t)buf[0]) << 8)  | (uint16_t)buf[1]);
+//	mAcc[1]  = ((((uint16_t)buf[2]) << 8)  | (uint16_t)buf[3]);
+//	mAcc[2]  = ((((uint16_t)buf[4]) << 8)  | (uint16_t)buf[5]);
+//	mGyro[0] = ((((uint16_t)buf[6]) << 8)  | (uint16_t)buf[7]);
+//	mGyro[1] = ((((uint16_t)buf[8]) << 8)  | (uint16_t)buf[9]);
+//	mGyro[2] = ((((uint16_t)buf[10]) << 8) | (uint16_t)buf[11]);
+//	mMagn[0] = ((((uint16_t)buf[12]) << 8) | (uint16_t)buf[13]);
+//	mMagn[1] = ((((uint16_t)buf[14]) << 8) | (uint16_t)buf[15]);
+//	mMagn[2] = ((((uint16_t)buf[16]) << 8) | (uint16_t)buf[17]);
+	
 	mAcc[0]  = ((((uint16_t)buf[1]) << 8)  | (uint16_t)buf[0]);
 	mAcc[1]  = ((((uint16_t)buf[3]) << 8)  | (uint16_t)buf[2]);
 	mAcc[2]  = ((((uint16_t)buf[5]) << 8)  | (uint16_t)buf[4]);
@@ -47,7 +57,7 @@ bool MPU9250::Measure()
 	mMagn[1] = ((((uint16_t)buf[15]) << 8) | (uint16_t)buf[14]);
 	mMagn[2] = ((((uint16_t)buf[17]) << 8) | (uint16_t)buf[16]);
 		
-	uint8_t timestamp_buf[] = { buf[4], buf[5], buf[6], buf[7] };
+	uint8_t timestamp_buf[] = { buf[18], buf[19], buf[20], buf[21] };
 	TS_TYPE ts = 0;
 	Set_Timestamp(0);
 	memcpy(&ts, timestamp_buf, 4);

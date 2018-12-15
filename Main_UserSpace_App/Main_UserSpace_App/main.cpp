@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <stdint.h>
-#include <unistd.h>
+#include <unistd.h>	// "usleep", ...
 #include <thread>
 #include <ctime>
 #include <chrono>
@@ -12,6 +12,7 @@
 #include "HDC1000.h"
 #include "MPU9250.h"
 #include "APDS9301.h"
+#include "IP_Sevenseg.h"
 
 // for FpgaRegion
 #include <libfpgaregion.h>
@@ -21,13 +22,19 @@ using namespace std;
 // IRQ Handler
 static void irq_handle();
 
+// Thread Handler Function for Sevenseg Thread
+static void Sevenseg_Handler(APDS9301 const * const apds);
+
 // FPGA Region Definitions
 static void ReconfigRequest();
 static void ReconfigDone();
 static FpgaRegion fpga("ssl_userspace_app", ReconfigRequest, ReconfigDone);
 
 // HANDLE function for SENSORS
-static bool Handle_Sensor(Sensor * const sens, int64_t Current_TS);
+static bool Handle_Sensor(Sensor * const sens);
+
+// Function to flush the FPGA FIFOs
+static void Flush_FIFO(Sensor * const sens);
 
 // Mutex to handle incomming FPGARegion Requests
 static mutex FPGAMutex;
@@ -51,16 +58,21 @@ static MPU9250  * mpu  = nullptr;
 static APDS9301 * apds = nullptr;
 
 ////////////////////////////////////////////////
+// Print message when data was successfully sent
+//#define PRINT_SENT_MESSAGE
+
+////////////////////////////////////////////////
 // MAIN FUNCTIONS
 int main()
 {
 	// Create THREAD to handle incomming INTERRUPTs
 	//auto irq_handle_thread = thread(irq_handle);
 	
+	thread *sevenseg_thread = nullptr;
+	
 	try
 	{
 		cout << "Started MAIN Userspace Appl.!" << endl;
-		fpga.Aquire();
 		
 		// CREATE Kafka Producer
 		KafkaProducer producer(HOSTNAME, TOPIC, PORT);
@@ -76,30 +88,42 @@ int main()
 			return -1;
 		}
 		
+		// Create Thread that constantly sets the BRIGHTNESS of the SEVENSEG displays
+		sevenseg_thread = new thread(Sevenseg_Handler, apds);
+		
 		// Prepare Interrupt Handler
 		// ---- TODO ----
 
+		// AQUIRE FPGA to read from CHAR DEVICE
+		fpga.Aquire();
+		
+		int i = 0;
+		
+		// Flush FIFO to ensure we are reading NEW values
+		Flush_FIFO(hdc);
+		Flush_FIFO(mpu);
+		Flush_FIFO(apds);
+		
 		// Read every Sensor as long as we dont receive the same timestamp twice
 		while (true)
 		{		
 			// Lock FPGA for OUR use
 			FPGAMutex.lock();
 			
-			// Fetch current Time of System (timestamp in milliseconds)
-			int64_t current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
-			
 			// Handle all Sensors:
 			// Read from one sensor as long as the same timestamp
 			// is recieved!
-//			if(!Handle_Sensor(hdc, current_ts))
-//				return -1;
-//			if (!Handle_Sensor(mpu, current_ts))
-//				return -1;
-			if (!Handle_Sensor(apds, current_ts))
+			if(!Handle_Sensor(hdc))
+				return -1;
+			if (!Handle_Sensor(mpu))
+				return -1;
+			if (!Handle_Sensor(apds))
 				return -1;
 			
 			// Release Lock for FPGA (can now be reconfigured)
 			FPGAMutex.unlock();
+
+			//cout << "Handled all Sensors " << i++ << endl;
 			
 			// sleep for 500 ms
 			usleep(500*1000);
@@ -112,6 +136,8 @@ int main()
 	
 	// JOIN THREADS and FREE MEMORY
 	//irq_handle_thread.join();
+	sevenseg_thread->join();
+	delete sevenseg_thread; sevenseg_thread = nullptr;
 	delete hdc; hdc = nullptr;
 	delete mpu; mpu = nullptr;
 	delete apds; apds = nullptr;
@@ -144,24 +170,34 @@ void ReconfigDone()
 	cout << "FPGA was successfully RECONFIGURED!" << endl;
 }
 
-bool Handle_Sensor(Sensor * const sens, int64_t Current_TS)
+bool Handle_Sensor(Sensor * const sens)
 {
 	assert(sens != nullptr);
 	
 	// Reset timestamps (prepare for next sensor!)
-	uint32_t timestamp = 0;
-			
+	uint32_t fpga_timestamp = 0;
+	int64_t base = 0;
+	int64_t const current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
+	bool first = true;	
+	
 	// READ next sensor
 	if(!sens->Measure())
 		return false;
+	
+	// If its the FIRST measurement --> calculate BASE time
+	if (first)
+	{
+		base = current_ts - (int64_t)sens->Get_Timestamp();
+		first = false;
+	}
 			
 	// As long as we read a new timestamp --> Send to cloud!
-	while(sens->Get_Timestamp() != timestamp)
+	while(sens->Get_Timestamp() != fpga_timestamp)
 	{
-		timestamp = sens->Get_Timestamp();
+		fpga_timestamp = sens->Get_Timestamp();
 		
 		// Send all values from Sensor
-		if(!sens->SendValues(timestamp + Current_TS))
+		if(!sens->SendValues(base + fpga_timestamp))
 			return false;
 				
 		// New MEASUREMENT
@@ -170,4 +206,48 @@ bool Handle_Sensor(Sensor * const sens, int64_t Current_TS)
 	}
 	
 	return true;
+}
+
+
+void Sevenseg_Handler(APDS9301 const * const apds)
+{
+	// Create reference to this object to start thread
+	// and display the IP adress of the board to the
+	// SEVENSEG displays
+	IP_Sevenseg & ip_displ = IP_Sevenseg::instance();
+	
+	// To calculate Lux value into 0-255 PWM value
+	uint8_t pwm_value = 0;
+	
+	// ENDLESS: Set PWM (Brightness) of SEVENSEG displays
+	while (true)
+	{
+		//pwm_value = apds->Get_Brightness() / 4;
+		pwm_value = 255;
+		ip_displ.Set_Brightness(pwm_value);
+		usleep(200 * 1000);	// 200 ms
+	}
+}
+
+void Flush_FIFO(Sensor * const sens)
+{
+	uint32_t fpga_timestamp = 0;
+	uint32_t fifo_depth = 0;
+	
+	// New MEASUREMENT
+	if(!sens->Measure())
+		return;
+	
+	// As long as we read a new timestamp --> Send to cloud!
+	while(sens->Get_Timestamp() != fpga_timestamp)
+	{
+		fpga_timestamp = sens->Get_Timestamp();
+		fifo_depth++;
+				
+		// New MEASUREMENT
+		if(!sens->Measure())
+			return;
+	}
+	
+	cout << "FIFO from " << sens->Get_SensorName() << " was flushed successfully! FIFO was " << fifo_depth << " steps deep!" << endl;
 }

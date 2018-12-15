@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string.h>
+#include <string>
 #include <stdint.h>
 #include <librdkafka/rdkafka.h>
 #include "InfluxDB.h"
@@ -28,5 +29,6 @@ private:
 	bool		CreateProducer(std::string const &broker);
 	bool		CreateTopic(std::string const &topic);
 	Producer *	mProducer;
-	Topic	 *	mTopic;
+	Topic	 *	mTopic;	
+	bool		_Send(std::string const & to_send);
 };
