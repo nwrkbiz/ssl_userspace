@@ -61,6 +61,14 @@ static APDS9301 * apds = nullptr;
 // Print message when data was successfully sent
 //#define PRINT_SENT_MESSAGE
 
+// TO enable IP display printing
+//#define DISPLAY_IP
+
+// Tolerances values
+#define TOL_X	3000
+#define TOL_Y	3000
+#define TOL_Z	3000
+
 ////////////////////////////////////////////////
 // MAIN FUNCTIONS
 int main()
@@ -88,6 +96,10 @@ int main()
 			return -1;
 		}
 		
+		// Configure Tolerances of MPU (for EVENT mode)
+		MPU9250::ThreeAxis tolerances = {TOL_X, TOL_Y, TOL_Z};
+		mpu->ConfigureTolerance(tolerances);
+		
 		// Create Thread that constantly sets the BRIGHTNESS of the SEVENSEG displays
 		sevenseg_thread = new thread(Sevenseg_Handler, apds);
 		
@@ -110,6 +122,9 @@ int main()
 			// Lock FPGA for OUR use
 			FPGAMutex.lock();
 			
+			// Set FPGA Ready for MPU to handle IRQ
+			mpu->SetFPGAReady();
+			
 			// Handle all Sensors:
 			// Read from one sensor as long as the same timestamp
 			// is recieved!
@@ -120,13 +135,16 @@ int main()
 			if (!Handle_Sensor(apds))
 				return -1;
 			
+			// Set FPGA NOT Ready in MPU
+			mpu->SetFPGANOTReady();
+			
 			// Release Lock for FPGA (can now be reconfigured)
 			FPGAMutex.unlock();
 
 			//cout << "Handled all Sensors " << i++ << endl;
 			
 			// sleep for 500 ms
-			usleep(500*1000);
+			usleep(200*1000);
 		}
 	}
 	catch (string const & exept)
@@ -158,7 +176,7 @@ void ReconfigRequest()
 	// If we successfully aquired the FPGA --> RELEASE and then RECONFIGURE it!
 	fpga.Release();
 	
-	cout << "FPGA is now being RECONFIGURED!" << endl;
+	cout << "FPGA is now being RECONFIGURED (Main Userspace App)!" << endl;
 }
 
 void ReconfigDone()
@@ -167,7 +185,7 @@ void ReconfigDone()
 	// let the MAIN thread do its work again!
 	fpga.Aquire();
 	FPGAMutex.unlock();
-	cout << "FPGA was successfully RECONFIGURED!" << endl;
+	cout << "FPGA was successfully RECONFIGURED (Main Userspace App)!" << endl;
 }
 
 bool Handle_Sensor(Sensor * const sens)
@@ -175,10 +193,10 @@ bool Handle_Sensor(Sensor * const sens)
 	assert(sens != nullptr);
 	
 	// Reset timestamps (prepare for next sensor!)
-	uint32_t fpga_timestamp = 0;
-	int64_t base = 0;
-	int64_t const current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
-	bool first = true;	
+	uint32_t fpga_timestamp = sens->Get_Timestamp();
+	static int64_t base = 0;
+	static int64_t const current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
+	static bool first = true;	
 	
 	// READ next sensor
 	if(!sens->Measure())
@@ -199,7 +217,7 @@ bool Handle_Sensor(Sensor * const sens)
 		// Send all values from Sensor
 		if(!sens->SendValues(base + fpga_timestamp))
 			return false;
-				
+			
 		// New MEASUREMENT
 		if(!sens->Measure())
 			return false;
@@ -214,8 +232,9 @@ void Sevenseg_Handler(APDS9301 const * const apds)
 	// Create reference to this object to start thread
 	// and display the IP adress of the board to the
 	// SEVENSEG displays
+#if defined(DISPLAY_IP)
 	IP_Sevenseg & ip_displ = IP_Sevenseg::instance();
-	
+#endif
 	// To calculate Lux value into 0-255 PWM value
 	uint8_t pwm_value = 0;
 	
@@ -224,14 +243,16 @@ void Sevenseg_Handler(APDS9301 const * const apds)
 	{
 		//pwm_value = apds->Get_Brightness() / 4;
 		pwm_value = 255;
+#if defined(DISPLAY_IP)
 		ip_displ.Set_Brightness(pwm_value);
+#endif
 		usleep(200 * 1000);	// 200 ms
 	}
 }
 
 void Flush_FIFO(Sensor * const sens)
 {
-	uint32_t fpga_timestamp = 0;
+	uint32_t fpga_timestamp = -1;
 	uint32_t fifo_depth = 0;
 	
 	// New MEASUREMENT

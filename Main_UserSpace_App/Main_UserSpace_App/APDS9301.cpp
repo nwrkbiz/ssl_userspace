@@ -5,7 +5,17 @@
 #include <math.h>
 #include "APDS9301.h"
 
+// To print debug infos to file "output.csv"
+#define PRINT_DEBUG
+
+#if defined(PRINT_DEBUG)
+#include <fstream>
+std::ofstream file("output.csv");
+#endif
+
 using namespace std;
+
+uint16_t t1, t2;
 
 APDS9301::APDS9301(std::string const SensorName, std::string const CharDevice_Path, size_t const Buffer_Length, KafkaProducer & Producer)
 	: Sensor(SensorName, CharDevice_Path, Buffer_Length, Producer)
@@ -14,6 +24,9 @@ APDS9301::APDS9301(std::string const SensorName, std::string const CharDevice_Pa
 	
 	// Prepare InfluxDB fields
 	Get_Influx_Fields().insert(make_pair("Wert", 0.0f));
+#if defined(PRINT_DEBUG)
+	file << "CH0 dec; CH0 hex;CH1 dec;CH1 hex;brightness dec;brightness hex;timestamp" << endl;
+#endif
 }
 
 bool APDS9301::Measure()
@@ -27,7 +40,10 @@ bool APDS9301::Measure()
 	
 	// Calculate Values out of BUFFER
 	uint16_t temp_CH0 = ((((uint16_t)buf[0]) << 8) | (uint16_t)buf[1]);	
-	uint16_t temp_CH1 = ((((uint16_t)buf[2]) << 8) | (uint16_t)buf[3]);
+	uint16_t temp_CH1 = ((((uint16_t)buf[3]) << 8) | (uint16_t)buf[2]);
+	
+	t1 = temp_CH0;
+	t2 = temp_CH1;
 	
 	float temp = 0.0f;
 	float temp_Division = ((float)temp_CH1) / ((float)temp_CH0);
@@ -44,12 +60,8 @@ bool APDS9301::Measure()
 		temp = 0;
 	
 	mBrightness = temp;
-		
-	uint8_t timestamp_buf[] = { buf[4], buf[5], buf[6], buf[7] };
-	TS_TYPE ts = 0;
-	Set_Timestamp(0);
-	memcpy(&ts, timestamp_buf, 4);
-	Set_Timestamp(ts);
+	
+	Set_Timestamp(&buf[4]);
 	
 	return true;
 }
@@ -61,6 +73,16 @@ uint32_t APDS9301::Get_Brightness() const
 
 bool APDS9301::SendValues(int64_t Timestamp)
 {
+//	static uint32_t i = 0;
+//	
+//	if (i < 10)
+//	{
+//		i++;
+//		return true;
+//	}
+//	
+//	i = 0;
+	
 	// Send BRIGTHNESS value
 	Get_Influx()->Set_Measurement("Helligkeit");
 	Get_Influx_Fields()["Wert"] = mBrightness;
@@ -68,6 +90,12 @@ bool APDS9301::SendValues(int64_t Timestamp)
 				
 	if (!Get_Producer().Send_InfluxDB(Get_Influx()))
 			return false;
+	
+#if defined(PRINT_DEBUG)
+	file << dec << t1 << ";0x" << hex << t1 << ";"
+		<< dec << t2 << ";0x" << hex << t2 << ";"
+		<< dec << mBrightness << ";0x" << hex << mBrightness << dec << ";" << Get_Timestamp() << endl;
+#endif
 	
 	return true;
 }

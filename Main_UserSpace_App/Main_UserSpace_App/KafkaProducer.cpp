@@ -78,7 +78,7 @@ bool KafkaProducer::CreateProducer(string const &broker)
 	// Set the CONFIG for the Producer
 	if ((rd_kafka_conf_set(conf, "bootstrap.servers",	broker.c_str(), errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK)	||
 		(rd_kafka_conf_set(conf, "compression.type",	"gzip", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK)			||
-		(rd_kafka_conf_set(conf, "batch.num.messages",	"16000", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) 			||
+		(rd_kafka_conf_set(conf, "message.max.bytes",	"1500", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) 			||
 		(rd_kafka_conf_set(conf, "linger.ms",			"5", errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) )
 	{
 		fprintf(stderr, "%s\n", errstr);
@@ -141,8 +141,8 @@ retry:
 	}
 
 	// Wait for messages to be sent
-	//rd_kafka_poll(mProducer, 0/*non-blocking*/);
-	//rd_kafka_flush(mProducer, 10 * 1000 /* wait for max 10 seconds */);
+//	rd_kafka_poll(mProducer, 0/*non-blocking*/);
+//	rd_kafka_flush(mProducer, 10 * 1000 /* wait for max 10 seconds */);
 
 	return true;	// return SUCCESS	
 }

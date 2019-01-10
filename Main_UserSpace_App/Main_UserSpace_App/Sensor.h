@@ -24,11 +24,13 @@ public:
 	virtual bool		Measure()						= 0;
 	virtual bool		SendValues(int64_t Timestamp)	= 0;
 	
-private:
+protected:
 	
 	// Internal Members ONLY used inside the class
 	std::string const    mCharDevice_Path;
 	     size_t const    mBuffer_Length;
+		 
+private:
 		uint8_t		  *  mRead_Buffer;
 	    TS_TYPE			 mTimestamp;
 	std::string const    mSensorName;
@@ -51,5 +53,6 @@ protected:
 	InfluxDB *				Get_Influx();
 	KafkaProducer		&	Get_Producer() const;
 	void					Set_Timestamp(TS_TYPE Timestamp);
+	void					Set_Timestamp(uint8_t const Buf[4]);
 };
 

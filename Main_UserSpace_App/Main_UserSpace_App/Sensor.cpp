@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <cassert>
 #include <stdio.h>
 
 #include "Sensor.h"
@@ -112,4 +113,11 @@ void Sensor::Set_Timestamp(TS_TYPE Timestamp)
 KafkaProducer & Sensor::Get_Producer() const
 {
 	return mProducer;
+}
+
+void Sensor::Set_Timestamp(uint8_t const Buf[4])
+{
+	assert(Buf != nullptr);
+	
+	memcpy(&mTimestamp, Buf, 4);
 }

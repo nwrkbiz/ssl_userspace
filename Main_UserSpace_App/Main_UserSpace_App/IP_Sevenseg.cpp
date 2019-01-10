@@ -41,6 +41,9 @@ void IP_Sevenseg::Thread_Handle()
 	static const	size_t cReg_Size	= (cHEX_Num + cPWM_Num);
 	static			uint8_t ip[cIP_Length];
 	
+	// AQUIRE FPGA
+	mFPGA->Aquire();
+	
 	// endless loop to show ip
     for(int i = 0 ; i < cIP_Length ; i++)
 	{		
@@ -57,10 +60,8 @@ void IP_Sevenseg::Thread_Handle()
 			
 			string to_write = to_string(i + 1) + "  " + ip_part + pwm_part;
 			
-			// Before accessing CHAR DEVICE
-			// Lock MUTEX and AQUIRE FPGA!
+			// Before accessing CHAR DEVICE --> Lock MUTEX
 			mMutex_FPGA.lock();
-			mFPGA->Aquire();
 			
 			// Open and WRITE CHAR DEVICE (Seven Segment Display)
 			int output_fd = open(char_device, O_WRONLY);
@@ -73,8 +74,7 @@ void IP_Sevenseg::Thread_Handle()
 			write(output_fd, to_write.c_str(), cReg_Size);
 			close(output_fd);
 			
-			// After WRITING and CLOSING the file --> RELEASE FPGA and unlock MUTEX
-			mFPGA->Release();
+			// After WRITING and CLOSING the file --> unlock MUTEX
 			mMutex_FPGA.unlock();
 		}
 	    
@@ -94,6 +94,8 @@ void IP_Sevenseg::ReconfigRequest()
 	
 	// RELEASE FPGA
 	mFPGA->Release();
+	
+	cout << "FPGA is now being RECONFIGURED (Show IP App)!" << endl;
 }
 
 void IP_Sevenseg::ReconfigDone()
@@ -103,6 +105,8 @@ void IP_Sevenseg::ReconfigDone()
 	
 	// UNLOCK MUTEX --> let handler function work again
 	mMutex_FPGA.unlock();
+	
+	cout << "FPGA was successfully RECONFIGURED (Show IP App)!" << endl;
 }
 
 int IP_Sevenseg::GetIpAddr(uint8_t * ip, size_t const cLen, char const c_netIf[] /* = "eth0" */)
