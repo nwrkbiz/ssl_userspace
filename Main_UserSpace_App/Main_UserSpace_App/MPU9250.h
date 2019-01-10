@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 #include "Sensor.h"
+#include <signal.h>
 
 class MPU9250 : public Sensor
 {
@@ -12,9 +13,15 @@ public:
 	
 	// CTOR 
 	MPU9250(std::string const SensorName, std::string const CharDevice_Path, size_t const Buffer_Length, KafkaProducer & Producer);
+
+	//DTor
+	~MPU9250();
 	
 	// METHODs
 	virtual bool Measure();
+
+	static void MeasureIRQ(int n, siginfo_t *info, void *unused);
+
 	virtual bool SendValues(int64_t Timestamp);
 	
 	// Sensor specific GETTER methods
@@ -26,6 +33,8 @@ private:
 	ThreeAxis mGyro;	// [°/s]
 	ThreeAxis mAcc;  	// [g]
 	ThreeAxis mMagn; 	// [uT]
+	std::string c_misc_device = "/dev/mpu";
+	unsigned int c_bufSize = 10;
 };
 
 

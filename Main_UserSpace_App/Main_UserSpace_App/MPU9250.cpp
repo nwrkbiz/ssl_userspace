@@ -4,6 +4,13 @@
 #include <iostream>
 #include "MPU9250.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#define SIG_TEST 44
+
 using namespace std;
 
 MPU9250::MPU9250(std::string const SensorName, std::string const CharDevice_Path, size_t const Buffer_Length, KafkaProducer & Producer)
@@ -12,6 +19,20 @@ MPU9250::MPU9250(std::string const SensorName, std::string const CharDevice_Path
 	fill(mGyro.begin(), mGyro.end(), 0);
 	fill(mAcc.begin(),  mAcc.end(), 0);
 	fill(mMagn.begin(), mMagn.end(), 0);
+
+	//kernel needs to know our pid to be able to send us a signal
+	char buf[c_bufSize];
+	int configfd = open(c_misc_device.c_str(), O_WRONLY);
+	sprintf(buf, "%i", getpid());
+	write(configfd, buf, strlen(buf) + 1) ;
+	close(configfd);
+
+	 //setup the signal handler for SIG_TEST 
+ 	 //SA_SIGINFO -> we want the signal handler function with 3 arguments
+	struct sigaction sig;
+	sig.sa_sigaction = MeasureIRQ;
+	sig.sa_flags = SA_SIGINFO;
+	sigaction(SIG_TEST, &sig, NULL);
 }
 
 MPU9250::ThreeAxis const * const MPU9250::Get_Values(eVALUE_TYPE Which_Values) const
@@ -64,6 +85,13 @@ bool MPU9250::Measure()
 	Set_Timestamp(ts);
 	
 	return true;
+}
+
+
+//this function should be callback of signal
+void MPU9250::MeasureIRQ(int n, siginfo_t *info, void *unused)
+{
+	std::cout << "IRQ came" << std::endl;
 }
 
 bool MPU9250::SendValues(int64_t Timestamp)
