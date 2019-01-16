@@ -10,7 +10,7 @@
       <Transport>None</Transport>
     </BuildHost>
     <DeploymentHost>
-      <HostName>192.168.0.28</HostName>
+      <HostName>192.168.178.122</HostName>
       <Transport>SSH</Transport>
       <UserName>root</UserName>
     </DeploymentHost>
@@ -38,7 +38,7 @@
       <DeleteDisappearedFiles>false</DeleteDisappearedFiles>
       <ApplyGlobalExclusionList>true</ApplyGlobalExclusionList>
     </MainSourceTransferCommand>
-    <AllowChangingHostForMainCommands>false</AllowChangingHostForMainCommands>
+    <AllowChangingHostForMainCommands>true</AllowChangingHostForMainCommands>
     <SkipBuildIfNoSourceFilesChanged>false</SkipBuildIfNoSourceFilesChanged>
     <IgnoreFileTransferErrors>false</IgnoreFileTransferErrors>
     <RemoveRemoteDirectoryOnClean>false</RemoveRemoteDirectoryOnClean>

@@ -6,16 +6,14 @@
 #include "APDS9301.h"
 
 // To print debug infos to file "output.csv"
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 
 #if defined(PRINT_DEBUG)
-#include <fstream>
-std::ofstream file("output.csv");
+	#include <fstream>
+	std::ofstream file("output.csv");
 #endif
 
 using namespace std;
-
-uint16_t t1, t2;
 
 APDS9301::APDS9301(std::string const SensorName, std::string const CharDevice_Path, size_t const Buffer_Length, KafkaProducer & Producer)
 	: Sensor(SensorName, CharDevice_Path, Buffer_Length, Producer)
@@ -41,9 +39,6 @@ bool APDS9301::Measure()
 	// Calculate Values out of BUFFER
 	uint16_t temp_CH0 = ((((uint16_t)buf[0]) << 8) | (uint16_t)buf[1]);	
 	uint16_t temp_CH1 = ((((uint16_t)buf[3]) << 8) | (uint16_t)buf[2]);
-	
-	t1 = temp_CH0;
-	t2 = temp_CH1;
 	
 	float temp = 0.0f;
 	float temp_Division = ((float)temp_CH1) / ((float)temp_CH0);

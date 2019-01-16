@@ -48,7 +48,8 @@
     <ClCompile>
       <AdditionalIncludeDirectories>C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include;C:/poky/sdk_x86/sysroots/x86\_64-pokysdk-mingw32/usr/lib/arm-poky-linux-gnueabi/gcc/arm-poky-linux-gnueabi/7.1.1/include-fixed;=/usr/include/c++/7.1.1;=/usr/include/c++/7.1.1/arm-poky-linux-gnueabi;=/usr/include;=/usr/lib/gcc/arm-poky-linux-gnueabi/7.1.1/include;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DEBUG=1; _GLIBCXX_ABI_TAG_CXX11=;__ARM_PCS_VFP;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 -fpermissive %(AdditionalOptions)</AdditionalOptions>
+      <GeneratePreprocessorOutput>false</GeneratePreprocessorOutput>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
