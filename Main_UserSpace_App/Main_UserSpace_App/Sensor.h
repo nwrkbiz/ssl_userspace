@@ -29,6 +29,9 @@ protected:
 	// Internal Members ONLY used inside the class
 	std::string const    mCharDevice_Path;
 	     size_t const    mBuffer_Length;
+	
+	// Kafka Producer for sending via Network
+	KafkaProducer	   & mProducer;
 		 
 private:
 		uint8_t		  *  mRead_Buffer;
@@ -39,8 +42,6 @@ private:
 	InfluxDB::FIELD_MAP  mInflux_Fields;
 	// Influx Class for sending data via Line Protocol
 	InfluxDB		  *  mInflux;
-	// Kafka Producer for sending via Network
-	KafkaProducer	   & mProducer;
 	
 protected:
 	// These methods MUST be 'protected' to be callable

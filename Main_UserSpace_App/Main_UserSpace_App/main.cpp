@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <array>
 #include <stdint.h>
 #include <unistd.h>	// "usleep", ...
 #include <thread>
@@ -19,9 +20,6 @@
 
 using namespace std;
 
-// IRQ Handler
-static void irq_handle();
-
 // Thread Handler Function for Sevenseg Thread
 static void Sevenseg_Handler(APDS9301 const * const apds);
 
@@ -31,7 +29,7 @@ static void ReconfigDone();
 static FpgaRegion fpga("ssl_userspace_app", ReconfigRequest, ReconfigDone);
 
 // HANDLE function for SENSORS
-static bool Handle_Sensor(Sensor * const sens);
+static bool Handle_Sensor(Sensor * const sens, MPU9250 * base_getter);
 
 // Function to flush the FPGA FIFOs
 static void Flush_FIFO(Sensor * const sens);
@@ -48,7 +46,7 @@ string		const TOPIC		= "telegraf";
 ////////////////////////////////////////////////
 // LENGHTS of Read Buffers for Sensors
 static const size_t HDC1000_Buffer_Length	= 12;
-static const size_t MPU9250_Buffer_Length	= 37;
+static const size_t MPU9250_Buffer_Length	= 22;
 static const size_t APDS9301_Buffer_Length	= 11;
 
 ////////////////////////////////////////////////
@@ -58,31 +56,30 @@ static MPU9250  * mpu  = nullptr;
 static APDS9301 * apds = nullptr;
 
 ////////////////////////////////////////////////
+// TOLERANCE values for EVENT MODE
+#define BYTES(tol_in_g) ((uint8_t)((int16_t)((tol_in_g) * MPU9250::ACCEL_DIVIDER))), ((uint8_t)((int16_t)((tol_in_g) * MPU9250::ACCEL_DIVIDER) >> 8))
+static const array<uint8_t, 12> tolerances = {BYTES(3), BYTES(-3), BYTES(3), BYTES(-3), BYTES(3), BYTES(-3)};
+
+////////////////////////////////////////////////
 // Print message when data was successfully sent
 //#define PRINT_SENT_MESSAGE
 
 // TO enable IP display printing
-//#define DISPLAY_IP
-
-// Tolerances values
-#define TOL_X	3000
-#define TOL_Y	3000
-#define TOL_Z	3000
+#define DISPLAY_IP
 
 ////////////////////////////////////////////////
 // MAIN FUNCTIONS
 int main()
 {
-	// Create THREAD to handle incomming INTERRUPTs
-	//auto irq_handle_thread = thread(irq_handle);
-	
+	// Thread that controls and dimms the SEVEN SEG LEDs
 	thread *sevenseg_thread = nullptr;
 	
+	// TRY-CATCH
 	try
 	{
 		cout << "Started MAIN Userspace Appl.!" << endl;
 		
-		// CREATE Kafka Producer
+		// KAFKA PRODUCER
 		KafkaProducer producer(HOSTNAME, TOPIC, PORT);
 		
 		// Create Sensor Classes
@@ -96,15 +93,14 @@ int main()
 			return -1;
 		}
 		
+		// Set FPGA Ready for MPU to handle IRQ
+		mpu->SetFPGAReady();
+		
 		// Configure Tolerances of MPU (for EVENT mode)
-		MPU9250::ThreeAxis tolerances = {TOL_X, TOL_Y, TOL_Z};
 		mpu->ConfigureTolerance(tolerances);
 		
 		// Create Thread that constantly sets the BRIGHTNESS of the SEVENSEG displays
 		sevenseg_thread = new thread(Sevenseg_Handler, apds);
-		
-		// Prepare Interrupt Handler
-		// ---- TODO ----
 
 		// AQUIRE FPGA to read from CHAR DEVICE
 		fpga.Aquire();
@@ -128,23 +124,23 @@ int main()
 			// Handle all Sensors:
 			// Read from one sensor as long as the same timestamp
 			// is recieved!
-			if(!Handle_Sensor(hdc))
+			if(!Handle_Sensor(hdc, mpu))
 				return -1;
-			if (!Handle_Sensor(mpu))
+			if (!Handle_Sensor(mpu, mpu))
 				return -1;
-			if (!Handle_Sensor(apds))
+			if (!Handle_Sensor(apds, mpu))
 				return -1;
+
+			//cout << "Handled all Sensors " << i++ << endl;
+			
+			// sleep for 500 ms
+			usleep(200*1000);
 			
 			// Set FPGA NOT Ready in MPU
 			mpu->SetFPGANOTReady();
 			
 			// Release Lock for FPGA (can now be reconfigured)
 			FPGAMutex.unlock();
-
-			//cout << "Handled all Sensors " << i++ << endl;
-			
-			// sleep for 500 ms
-			usleep(200*1000);
 		}
 	}
 	catch (string const & exept)
@@ -161,11 +157,6 @@ int main()
 	delete apds; apds = nullptr;
 	
 	return 0;
-}
-
-void irq_handle()
-{
-	// TODO: handle IRQ
 }
 
 void ReconfigRequest()
@@ -188,13 +179,12 @@ void ReconfigDone()
 	cout << "FPGA was successfully RECONFIGURED (Main Userspace App)!" << endl;
 }
 
-bool Handle_Sensor(Sensor * const sens)
+bool Handle_Sensor(Sensor * const sens, MPU9250 * base_getter)
 {
 	assert(sens != nullptr);
 	
 	// Reset timestamps (prepare for next sensor!)
 	uint32_t fpga_timestamp = sens->Get_Timestamp();
-	static int64_t base = 0;
 	static int64_t const current_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch()).count();
 	static bool first = true;	
 	
@@ -205,7 +195,8 @@ bool Handle_Sensor(Sensor * const sens)
 	// If its the FIRST measurement --> calculate BASE time
 	if (first)
 	{
-		base = current_ts - (int64_t)sens->Get_Timestamp();
+		if (base_getter != NULL)
+			base_getter->SetBase(current_ts - (int64_t)sens->Get_Timestamp());
 		first = false;
 	}
 			
@@ -215,7 +206,7 @@ bool Handle_Sensor(Sensor * const sens)
 		fpga_timestamp = sens->Get_Timestamp();
 		
 		// Send all values from Sensor
-		if(!sens->SendValues(base + fpga_timestamp))
+		if(!sens->SendValues(base_getter->GetBase() + fpga_timestamp))
 			return false;
 			
 		// New MEASUREMENT
@@ -225,7 +216,6 @@ bool Handle_Sensor(Sensor * const sens)
 	
 	return true;
 }
-
 
 void Sevenseg_Handler(APDS9301 const * const apds)
 {
@@ -241,12 +231,14 @@ void Sevenseg_Handler(APDS9301 const * const apds)
 	// ENDLESS: Set PWM (Brightness) of SEVENSEG displays
 	while (true)
 	{
-		//pwm_value = apds->Get_Brightness() / 4;
-		pwm_value = 255;
+		if ((apds->Get_Brightness() / 8) >= 255)
+			pwm_value = 255;
+		else
+			pwm_value = apds->Get_Brightness() / 8;
 #if defined(DISPLAY_IP)
 		ip_displ.Set_Brightness(pwm_value);
 #endif
-		usleep(200 * 1000);	// 200 ms
+		usleep(2000 * 1000);	// 2 s
 	}
 }
 

@@ -50,14 +50,14 @@ void IP_Sevenseg::Thread_Handle()
 		if (GetIpAddr(ip, cIP_Length) == 0)
 		{
 			// Add leading zeros
-			std::stringstream ss, ss2;
+			std::stringstream ss;
 			ss << std::setw(3) << std::setfill('0') << (int)ip[cIP_Length - i - 1];
-			ss2 << hex << mBrightness;
-			std::string ip_part = ss.str();
-			string pwm_part = ss2.str();
+			char pwm[2] = { 0 };
+			sprintf(pwm, "%02x", mBrightness);
+			string ip_part = ss.str();
+			string pwm_part = pwm;
 
 			// string to write to char device
-			
 			string to_write = to_string(i + 1) + "  " + ip_part + pwm_part;
 			
 			// Before accessing CHAR DEVICE --> Lock MUTEX

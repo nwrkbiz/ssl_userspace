@@ -2,15 +2,32 @@
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include "MPU9250.h"
 
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 
+
+/////////////////////////////
+//	DEFINES
 #define SIG_TEST 44
 
+// how many bytes to read/write to char device
+#define READ_SIZE			22
+#define WRITE_SIZE			21
+#define EVENT_OFFSET		15
+#define PID_OFFSET			16
+#define PID_SIZE			5
+#define TIMESTAMP_OFFSET	18
+
+#define GET_VALUE(x) ((((uint16_t)(*((x)+1))) << 8) | ((uint16_t)(*(x))))
+
 using namespace std;
+
+MPU9250* MPU9250::ptrMe = NULL;
 
 MPU9250::MPU9250(std::string const SensorName, std::string const CharDevice_Path, size_t const Buffer_Length, KafkaProducer & Producer)
 	: Sensor(SensorName, CharDevice_Path, Buffer_Length, Producer)
@@ -19,21 +36,29 @@ MPU9250::MPU9250(std::string const SensorName, std::string const CharDevice_Path
 	fill(mAcc.begin(),  mAcc.end(), 0);
 	fill(mMagn.begin(), mMagn.end(), 0);
 	
-	FPGA_Ready = false;
-	
 	//kernel needs to know our pid to be able to send us a signal
-	char buf[mBuffer_Length];
+	ostringstream ss;
+	ss << setw(5) << setfill('0') << getpid();
 	int configfd = open(mCharDevice_Path.c_str(), O_WRONLY);
-	sprintf(buf, "%i", getpid());
-	write(configfd, buf, strlen(buf) + 1) ;
+	string temp = ss.str();
+	uint8_t t2[WRITE_SIZE] = { 0 };
+	t2[0] = 0x01;
+	memcpy((t2 + PID_OFFSET), temp.c_str(), 5);
+	write(configfd, t2, WRITE_SIZE);
 	close(configfd);
+	
+	// Set ourself to static member
+	MPU9250::ptrMe = this;
 
-	 //setup the signal handler for SIG_TEST 
- 	 //SA_SIGINFO -> we want the signal handler function with 3 arguments
+	//setup the signal handler for SIG_TEST 
+	//SA_SIGINFO -> we want the signal handler function with 3 arguments
 	struct sigaction sig;
 	sig.sa_sigaction = MeasureIRQ;
 	sig.sa_flags = SA_SIGINFO;
 	sigaction(SIG_TEST, &sig, NULL);
+	
+	// reset base0
+	base = 0;
 }
 
 MPU9250::ThreeAxis const * const MPU9250::Get_Values(eVALUE_TYPE Which_Values) const
@@ -49,56 +74,72 @@ MPU9250::ThreeAxis const * const MPU9250::Get_Values(eVALUE_TYPE Which_Values) c
 	}
 }
 
-
 // Configure Tolerance Register for EVENT MODE
-// PARAM: Tolerances[0]: tolerance value for X-AXIS
-// PARAM: Tolerances[1]: tolerance value for Y-AXIS
-// PARAM: Tolerances[2]: tolerance value for Z-AXIS
-bool MPU9250::ConfigureTolerance(ThreeAxis const & Tolerances)
+bool MPU9250::ConfigureTolerance(MPU9250::Tolerances const & tolerances)
 {
 	if (!FPGA_Ready)
 		return true;
 	
+	static uint8_t to_write[WRITE_SIZE] = { 0 };
+	memset(to_write, 0, WRITE_SIZE);
+	int tol_fd = open(mCharDevice_Path.c_str(), O_WRONLY);
+	
+	// let FREQENCY remain the same
+	to_write[0] = 0;
+	to_write[1] = 0;
+	
+	// enable tolerances
+	to_write[2] = 0xFF;
+	
 	// write X, Y and Z tolerance values
-	for (auto const & tol : Tolerances)
+	for(size_t i = 3; i < WRITE_SIZE; i++)
 	{
-		// write tol to char device
+		to_write[i] = tolerances[i-3];
 	}
+	
+	// DISABLE EVENT MODE
+	to_write[EVENT_OFFSET] = '0';
+	
+	// No change of PID
+	
+	// Write to CHAR DEVICE
+	write(tol_fd, to_write, WRITE_SIZE);
+	
+	// close CHAR DEVICE
+	close(tol_fd);
+	
+	// ONE TIME EVENT FIFO FLUSH
+	Handle_IRQ(false);
 }
 
 //this function should be callback of signal
-void MPU9250::MeasureIRQ(int n, siginfo_t *info, void *unused)
-{
-	// 1) Read out EVENT FIFO
-	// 2) Send to InfluxDB
-	
+void MPU9250::MeasureIRQ(int n, siginfo_t *info, void * me)
+{	
+	// Info that we got an IRQ
 	std::cout << "IRQ came" << std::endl;
+	
+	MPU9250::ptrMe->Handle_IRQ(true);
 }
 
 bool MPU9250::Measure()
-{
-	// Values needed for calculating correct Gyro/Acc/Magn Values
-	static const float cCorr_Gyro	= 1000.0			/ 32768.0;
-	static const float cCorr_Acc	= 8.0				/ 32768.0;
-	static const float cCorr_Magn	= (10.0 * 4219.0)	/ 32760.0; 
-	
+{	
 	// Buffer which contains values from sensor
 	uint8_t * buf = Get_Buffer();
 	
 	// (1) Read from CHAR DEVICE --> return NULLPTR if ERROR
 	if(!Read_CharDevice())
 		return false;
-	
+		
 	// Calculate Values out of BUFFER
-	mAcc[0]  = ((float)(((((uint16_t)buf[1]) << 8)  | (uint16_t)buf[0]) ) * cCorr_Acc);
-	mAcc[1]  = ((float)(((((uint16_t)buf[3]) << 8)  | (uint16_t)buf[2]) ) * cCorr_Acc);
-	mAcc[2]  = ((float)(((((uint16_t)buf[5]) << 8)  | (uint16_t)buf[4]) ) * cCorr_Acc);
-	mGyro[0] = ((float)(((((uint16_t)buf[7]) << 8)  | (uint16_t)buf[6]) ) * cCorr_Gyro);
-	mGyro[1] = ((float)(((((uint16_t)buf[9]) << 8)  | (uint16_t)buf[8]) ) * cCorr_Gyro);
-	mGyro[2] = ((float)(((((uint16_t)buf[11]) << 8) | (uint16_t)buf[10])) * cCorr_Gyro);
-	mMagn[0] = ((float)(((((uint16_t)buf[13]) << 8) | (uint16_t)buf[12])) * cCorr_Magn);
-	mMagn[1] = ((float)(((((uint16_t)buf[15]) << 8) | (uint16_t)buf[14])) * cCorr_Magn);
-	mMagn[2] = ((float)(((((uint16_t)buf[17]) << 8) | (uint16_t)buf[16])) * cCorr_Magn);
+	mAcc[0]  = ((int16_t)GET_VALUE(&buf[0])  / ACCEL_DIVIDER);
+	mAcc[1]  = ((int16_t)GET_VALUE(&buf[2])  / ACCEL_DIVIDER);
+	mAcc[2]  = ((int16_t)GET_VALUE(&buf[4])  / ACCEL_DIVIDER);
+	mGyro[0] = ((int16_t)GET_VALUE(&buf[6])  / GYRO_DIVIDER);
+	mGyro[1] = ((int16_t)GET_VALUE(&buf[8])  / GYRO_DIVIDER);
+	mGyro[2] = ((int16_t)GET_VALUE(&buf[10]) / GYRO_DIVIDER);
+	mMagn[0] = ((int16_t)GET_VALUE(&buf[12]) * 15 / 100);
+	mMagn[1] = ((int16_t)GET_VALUE(&buf[14]) * 15 / 100);
+	mMagn[2] = ((int16_t)GET_VALUE(&buf[16]) * 15 / 100);
 		
 	Set_Timestamp(&buf[18]);
 	
@@ -106,16 +147,16 @@ bool MPU9250::Measure()
 }
 
 bool MPU9250::SendValues(int64_t Timestamp)
-{
-//	static uint32_t i = 0;
-//	
-//	if (i < 200)
-//	{
-//		i++;
-//		return true;
-//	}
-//	
-//	i = 0;
+{	
+	static uint32_t i = 0;
+	
+	if (i < 150)
+	{
+		i++;
+		return true;
+	}
+	
+	i = 0;
 	
 	// BEFORE: Set Timestamp for this measurement
 	Get_Influx()->Set_Timestamp(Timestamp);
@@ -164,4 +205,111 @@ void MPU9250::SetFPGAReady()
 void MPU9250::SetFPGANOTReady()
 {
 	FPGA_Ready = false;
+}
+
+int64_t MPU9250::GetBase()
+{
+	return base;
+}
+
+void MPU9250::SetBase(int64_t Base)
+{
+	base = Base;
+}
+
+void MPU9250::Handle_IRQ(bool send)
+{
+	static uint8_t to_write[WRITE_SIZE] = { 0 };
+	static uint8_t to_read[READ_SIZE];
+	
+	InfluxDB::TAG_MAP const tags = { make_pair("Sensor", Get_SensorName()) };
+	InfluxDB::FIELD_MAP fields;
+	InfluxDB inflx(tags, fields, -1, "EVENT_MODE");
+		
+	if (!FPGA_Ready)
+		return;
+		
+	// Open CHAR DEVICE
+	int fd = open(mCharDevice_Path.c_str(), O_WRONLY);
+	if (fd == -1)
+	{
+		cerr << "Error: opending Char Device!" << endl;
+		return;
+	}
+		
+	// (1) Set device driver into EVENT mode (write EVENT byte)
+	memset(to_write, 0, WRITE_SIZE);
+	to_write[EVENT_OFFSET] = '1';
+	write(fd, to_write, WRITE_SIZE);
+	close(fd);
+		
+	// (2) Read out EVENT FIFO and send to cloud
+	ReadDevice(to_read);
+	TS_TYPE timestamp, old_timestamp = 0;
+	memcpy(&timestamp, &to_read[TIMESTAMP_OFFSET], 4);
+	
+	size_t i = 0;
+		
+	// As long as we read a new timestamp --> Send to cloud!
+	while(timestamp != old_timestamp)
+	{
+		old_timestamp = timestamp;
+			
+		if (send)
+		{
+			// Send all values
+			inflx.Set_Timestamp(ptrMe->GetBase() + timestamp);
+			fields.clear();
+			fields.insert(make_pair("AccX", ((int16_t)GET_VALUE(&to_read[0])  / ACCEL_DIVIDER)));
+			fields.insert(make_pair("AccY", ((int16_t)GET_VALUE(&to_read[2])  / ACCEL_DIVIDER)));
+			fields.insert(make_pair("AccZ", ((int16_t)GET_VALUE(&to_read[4])  / ACCEL_DIVIDER))); 
+	
+			if (!mProducer.Send_InfluxDB(&inflx))
+				cout << "Error sending to cloud" << endl;
+			
+			i++;
+		}
+				
+		// New MEASUREMENT
+		ReadDevice(to_read);
+		memcpy(&timestamp, &to_read[TIMESTAMP_OFFSET], 4);
+		
+		if (timestamp == old_timestamp)
+			break;
+	}
+	
+	cout << i << " values were sent!" << endl;
+		
+	// (3) Set device driver back into STREAMING mode
+	fd = open(mCharDevice_Path.c_str(), O_WRONLY);
+	if (fd == -1)
+	{
+		cerr << "Error: opending Char Device!" << endl;
+		return;
+	}
+	memset(to_write, 0, WRITE_SIZE);
+	to_write[EVENT_OFFSET] = '0';
+	write(fd, to_write, WRITE_SIZE);
+		
+	// Close CHAR DEVICE
+	close(fd);
+}
+
+
+void MPU9250::ReadDevice(uint8_t * buf)
+{
+	int fdtemp = open(mCharDevice_Path.c_str(), O_RDONLY);
+	if (fdtemp == -1)
+	{
+		cerr << "Error: opending Char Device!" << endl;
+		return;
+	}
+	ssize_t ret = read(fdtemp, buf, READ_SIZE);
+			
+	if (ret != READ_SIZE)
+	{
+		cerr << "Error: reading Char Device!" << endl;
+		return;
+	}
+	close(fdtemp);
 }
